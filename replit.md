@@ -33,7 +33,7 @@ The schema defines four main entities:
 - **users**: Core user data with Google OAuth integration and ban functionality
 - **sessions**: Authentication sessions with expiration tracking
 - **groups**: User-created categories for organizing links
-- **links**: Saved URLs with title, optional notes, and group assignment
+- **links**: Saved URLs with title, optional notes, group assignment, pin status (isPinned), and click tracking (clickCount)
 
 ### API Design
 RESTful API endpoints under `/api/` prefix:
