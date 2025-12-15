@@ -25,14 +25,37 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const normalizeUrl = (url: string): string => {
+  let normalized = url.trim();
+  if (!normalized.match(/^https?:\/\//i)) {
+    normalized = 'https://' + normalized;
+  }
+  return normalized;
+};
+
+const isValidUrl = (url: string): boolean => {
+  try {
+    const normalized = normalizeUrl(url);
+    new URL(normalized);
+    const domainPattern = /^https?:\/\/[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}/;
+    return domainPattern.test(normalized);
+  } catch {
+    return false;
+  }
+};
+
 const formSchema = z.object({
-  url: z.string().url("Please enter a valid URL"),
+  url: z.string().min(1, "URL is required").refine(isValidUrl, "Please enter a valid URL (e.g., chatgpt.com or https://chatgpt.com)"),
   title: z.string().min(1, "Title is required"),
   groupId: z.string().min(1, "Please select a section"),
   note: z.string().optional(),
 });
 
-export function AddLinkDialog() {
+interface AddLinkDialogProps {
+  onSaving?: () => void;
+}
+
+export function AddLinkDialog({ onSaving }: AddLinkDialogProps) {
   const { addLink, groups, activeGroupId, user, setShowAuthModal } = useVault();
   const [open, setOpen] = useState(false);
 
@@ -52,11 +75,21 @@ export function AddLinkDialog() {
       return;
     }
     setOpen(newOpen);
+    if (newOpen) {
+      form.reset({
+        url: "",
+        title: "",
+        groupId: activeGroupId === 'all' ? (groups[0]?.id || "") : activeGroupId,
+        note: "",
+      });
+    }
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    const normalizedUrl = normalizeUrl(values.url);
+    onSaving?.();
     addLink({
-      url: values.url,
+      url: normalizedUrl,
       title: values.title,
       groupId: values.groupId,
       note: values.note || undefined,
@@ -89,7 +122,7 @@ export function AddLinkDialog() {
                 <FormItem>
                   <FormLabel>URL</FormLabel>
                   <FormControl>
-                    <Input data-testid="input-url" placeholder="https://..." {...field} className="font-mono text-sm bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all" />
+                    <Input data-testid="input-url" placeholder="chatgpt.com or https://..." {...field} className="font-mono text-sm bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

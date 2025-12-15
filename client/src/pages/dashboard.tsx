@@ -1,5 +1,5 @@
 import { Sidebar } from "@/components/sidebar";
-import { LinkCard } from "@/components/link-card";
+import { LinkCard, LinkCardSkeleton } from "@/components/link-card";
 import { AddLinkDialog } from "@/components/add-link-dialog";
 import { AuthModal } from "@/components/auth-modal";
 import { useVault } from "@/lib/store";
@@ -11,6 +11,7 @@ import { useState, useRef, useEffect } from "react";
 export default function Dashboard() {
   const { links, groups, activeGroupId, removeLink, searchQuery, setSearchQuery, user } = useVault();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const activeGroup = activeGroupId === 'all' 
@@ -33,6 +34,15 @@ export default function Dashboard() {
     }
   }, [searchOpen]);
 
+  useEffect(() => {
+    if (showSkeleton) {
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [showSkeleton, links]);
+
   const handleSearchToggle = () => {
     if (searchOpen && searchQuery) {
       setSearchQuery('');
@@ -40,15 +50,23 @@ export default function Dashboard() {
     setSearchOpen(!searchOpen);
   };
 
+  const handleSaving = () => {
+    setShowSkeleton(true);
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-background text-foreground flex"
+    >
       <Sidebar />
       <AuthModal />
       
       <main className="flex-1 ml-64 p-8 max-w-7xl mx-auto w-full">
         <header className="flex flex-col gap-6 mb-10">
           <div className="flex items-center justify-between">
-            {/* Expandable Search */}
             <div className="flex items-center">
               <motion.div
                 initial={false}
@@ -90,7 +108,7 @@ export default function Dashboard() {
               </motion.div>
             </div>
             
-            <AddLinkDialog />
+            <AddLinkDialog onSaving={handleSaving} />
           </div>
 
           <div className="flex items-end justify-between border-b border-border/40 pb-4">
@@ -130,12 +148,15 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <AnimatePresence mode="popLayout">
+              {showSkeleton && (
+                <LinkCardSkeleton key="skeleton" />
+              )}
               {filteredLinks.map((link) => (
                 <LinkCard key={link.id} link={link} onDelete={removeLink} />
               ))}
             </AnimatePresence>
             
-            {filteredLinks.length === 0 && (
+            {filteredLinks.length === 0 && !showSkeleton && (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -151,6 +172,6 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-    </div>
+    </motion.div>
   );
 }

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 
 export default function Account() {
   const { user, logout } = useVault();
@@ -45,26 +46,45 @@ export default function Account() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="min-h-screen bg-background text-foreground flex"
+      >
         <Sidebar />
         <main className="flex-1 ml-64 p-8 flex items-center justify-center">
           <p className="text-muted-foreground">Please sign in to view your account.</p>
         </main>
         <AuthModal />
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-background text-foreground flex"
+    >
       <Sidebar />
       <AuthModal />
       
-      <main className="flex-1 ml-64 p-8 max-w-3xl">
+      <motion.main 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="flex-1 ml-64 p-8 max-w-3xl"
+      >
         <h1 className="text-3xl font-display font-bold tracking-tight mb-8">Account</h1>
 
-        {/* Profile Section */}
-        <section className="mb-10 p-6 rounded-xl bg-card border border-card-border">
+        <motion.section 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+          className="mb-10 p-6 rounded-xl bg-card border border-card-border"
+        >
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
             <User size={20} /> Profile
           </h2>
@@ -105,10 +125,14 @@ export default function Account() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        {/* Feedback Section */}
-        <section className="mb-10 p-6 rounded-xl bg-card border border-card-border">
+        <motion.section 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="mb-10 p-6 rounded-xl bg-card border border-card-border"
+        >
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
             <MessageSquare size={20} /> Feedback or Bug Report
           </h2>
@@ -130,16 +154,19 @@ export default function Account() {
           >
             Send Feedback
           </Button>
-        </section>
+        </motion.section>
 
-        {/* Danger Zone */}
-        <section className="p-6 rounded-xl bg-destructive/5 border border-destructive/20">
+        <motion.section 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.25 }}
+          className="p-6 rounded-xl bg-destructive/5 border border-destructive/20"
+        >
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-6 text-destructive">
             <AlertTriangle size={20} /> Danger Zone
           </h2>
           
           <div className="space-y-6">
-            {/* Delete All Links */}
             <div className="p-4 rounded-lg bg-background border border-border">
               <h3 className="font-medium flex items-center gap-2 mb-2">
                 <Trash2 size={16} /> Delete All Links
@@ -164,7 +191,6 @@ export default function Account() {
               </div>
             </div>
 
-            {/* Delete Account */}
             <div className="p-4 rounded-lg bg-background border border-destructive/30">
               <h3 className="font-medium flex items-center gap-2 mb-2 text-destructive">
                 <AlertTriangle size={16} /> Delete Account
@@ -192,8 +218,8 @@ export default function Account() {
               </div>
             </div>
           </div>
-        </section>
-      </main>
-    </div>
+        </motion.section>
+      </motion.main>
+    </motion.div>
   );
 }
