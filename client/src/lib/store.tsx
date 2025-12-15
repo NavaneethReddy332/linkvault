@@ -22,6 +22,9 @@ type VaultContextType = {
   searchQuery: string;
   showAuthModal: boolean;
   selectedLinks: string[];
+  pinningLinkIds: Set<string>;
+  isAddingLink: boolean;
+  isLoggingOut: boolean;
   
   login: () => Promise<void>;
   logout: () => Promise<void>;
@@ -49,6 +52,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
+  const [pinningLinkIds, setPinningLinkIds] = useState<Set<string>>(new Set());
 
   const { data: user, isLoading: userLoading, refetch: refetchUser } = useQuery({
     queryKey: ['user'],
@@ -98,8 +102,20 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const togglePinMutation = useMutation({
     mutationFn: ({ id, isPinned }: { id: string; isPinned: boolean }) => 
       api.toggleLinkPin(id, isPinned),
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['links'] });
+      setPinningLinkIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    },
+    onError: (_, { id }) => {
+      setPinningLinkIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     },
   });
 
@@ -134,6 +150,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const togglePin = (id: string) => {
     const link = links.find(l => l.id === id);
     if (link) {
+      setPinningLinkIds(prev => new Set(prev).add(id));
       togglePinMutation.mutate({ id, isPinned: !link.isPinned });
     }
   };
@@ -204,6 +221,9 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       searchQuery,
       showAuthModal,
       selectedLinks,
+      pinningLinkIds,
+      isAddingLink: createLinkMutation.isPending,
+      isLoggingOut: logoutMutation.isPending,
       login,
       logout: () => logoutMutation.mutateAsync(),
       setShowAuthModal,

@@ -1,12 +1,29 @@
 import { useVault } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { Grid, Plus, LogOut, User, Bookmark, Code, Briefcase, Music, Film, BookOpen, ShoppingCart, Gamepad2, Plane, Heart, Coffee, Palette, Camera, Globe, Lightbulb, Hash, PlusCircle } from "lucide-react";
+import { Grid, Plus, LogOut, User, Bookmark, Code, Briefcase, Music, Film, BookOpen, ShoppingCart, Gamepad2, Plane, Heart, Coffee, Palette, Camera, Globe, Lightbulb, Hash, PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const sectionIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   'bookmarks': Bookmark,
@@ -93,9 +110,11 @@ const getSectionIcon = (name: string) => {
 };
 
 export function Sidebar() {
-  const { groups, activeGroupId, setActiveGroup, addGroup, user, logout, setShowAuthModal } = useVault();
+  const { groups, activeGroupId, setActiveGroup, addGroup, deleteGroup, user, logout, setShowAuthModal, isLoggingOut } = useVault();
   const [isAddingGroup, setIsAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
+  const groupToDelete = groups.find(g => g.id === deleteGroupId);
 
   const handleAddGroup = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,25 +180,40 @@ export function Sidebar() {
             {groups.map((group) => {
               const Icon = getSectionIcon(group.name);
               return (
-                <motion.button
+                <motion.div
                   key={group.id}
                   layout
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.2 }}
-                  onClick={() => setActiveGroup(group.id)}
-                  data-testid={`button-group-${group.id}`}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 group relative",
-                    activeGroupId === group.id 
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  )}
+                  className="group/section relative"
                 >
-                  <Icon size={16} className="opacity-70" />
-                  <span className="truncate">{group.name}</span>
-                </motion.button>
+                  <button
+                    onClick={() => setActiveGroup(group.id)}
+                    data-testid={`button-group-${group.id}`}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                      activeGroupId === group.id 
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <Icon size={16} className="opacity-70" />
+                    <span className="truncate flex-1 text-left">{group.name}</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteGroupId(group.id);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover/section:opacity-100 pointer-events-none group-hover/section:pointer-events-auto"
+                    data-testid={`button-delete-group-${group.id}`}
+                    title="Delete section"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </motion.div>
               );
             })}
           </AnimatePresence>
@@ -262,6 +296,44 @@ export function Sidebar() {
           </Button>
         )}
       </div>
+
+      <Dialog open={isLoggingOut} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[300px] border-destructive/30 bg-destructive/5 [&>button]:hidden">
+          <DialogHeader>
+            <DialogTitle className="text-center">Signing out...</DialogTitle>
+            <DialogDescription className="text-center">
+              <div className="flex justify-center py-4">
+                <Loader2 size={32} className="animate-spin text-destructive" />
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteGroupId} onOpenChange={(open) => !open && setDeleteGroupId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Section</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{groupToDelete?.name}"? All links in this section will also be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteGroupId) {
+                  deleteGroup(deleteGroupId);
+                  setDeleteGroupId(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 }

@@ -31,9 +31,10 @@ export default function Dashboard() {
     clearSelection,
     deleteSelectedLinks,
     moveSelectedLinks,
+    pinningLinkIds,
+    isAddingLink,
   } = useVault();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const activeGroup = activeGroupId === 'all' 
@@ -68,24 +69,11 @@ export default function Dashboard() {
     }
   }, [searchOpen]);
 
-  useEffect(() => {
-    if (showSkeleton) {
-      const timer = setTimeout(() => {
-        setShowSkeleton(false);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [showSkeleton, links]);
-
   const handleSearchToggle = () => {
     if (searchOpen && searchQuery) {
       setSearchQuery('');
     }
     setSearchOpen(!searchOpen);
-  };
-
-  const handleSaving = () => {
-    setShowSkeleton(true);
   };
 
   const handleSelectAll = () => {
@@ -150,7 +138,7 @@ export default function Dashboard() {
               </motion.div>
             </div>
             
-            <AddLinkDialog onSaving={handleSaving} />
+            <AddLinkDialog />
           </div>
 
           <div className="flex items-end justify-between border-b border-border/40 pb-4">
@@ -297,6 +285,7 @@ export default function Dashboard() {
                         isSelected={selectedLinks.includes(link.id)}
                         onToggleSelect={toggleSelectLink}
                         hasSelection={hasSelection}
+                        isPinning={pinningLinkIds.has(link.id)}
                       />
                     ))}
                   </AnimatePresence>
@@ -313,7 +302,7 @@ export default function Dashboard() {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   <AnimatePresence mode="popLayout">
-                    {showSkeleton && (
+                    {isAddingLink && (
                       <LinkCardSkeleton key="skeleton" />
                     )}
                     {unpinnedLinks.map((link) => (
@@ -325,6 +314,7 @@ export default function Dashboard() {
                         isSelected={selectedLinks.includes(link.id)}
                         onToggleSelect={toggleSelectLink}
                         hasSelection={hasSelection}
+                        isPinning={pinningLinkIds.has(link.id)}
                       />
                     ))}
                   </AnimatePresence>
@@ -332,7 +322,7 @@ export default function Dashboard() {
               </div>
             )}
             
-            {filteredLinks.length === 0 && !showSkeleton && (
+            {filteredLinks.length === 0 && !isAddingLink && (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

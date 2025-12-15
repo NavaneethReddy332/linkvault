@@ -1,5 +1,5 @@
 import { Link } from "@/lib/store";
-import { ExternalLink, Trash2, Star, MousePointerClick } from "lucide-react";
+import { ExternalLink, Trash2, Star, MousePointerClick, Loader2 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -19,9 +19,10 @@ interface LinkCardProps {
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
   hasSelection?: boolean;
+  isPinning?: boolean;
 }
 
-export function LinkCard({ link, onDelete, onTogglePin, isSelected = false, onToggleSelect, hasSelection = false }: LinkCardProps) {
+export function LinkCard({ link, onDelete, onTogglePin, isSelected = false, onToggleSelect, hasSelection = false, isPinning = false }: LinkCardProps) {
   const getFavicon = (url: string) => {
     try {
       const domain = new URL(url).hostname;
@@ -130,15 +131,22 @@ export function LinkCard({ link, onDelete, onTogglePin, isSelected = false, onTo
             <div className="flex items-center gap-1 shrink-0">
               <button 
                 onClick={() => onTogglePin(link.id)}
+                disabled={isPinning}
                 className={`p-1.5 rounded-md transition-colors ${
-                  link.isPinned 
-                    ? "text-amber-500 hover:text-amber-600" 
-                    : "text-muted-foreground hover:text-amber-500 opacity-0 group-hover:opacity-100"
+                  isPinning
+                    ? "text-amber-500"
+                    : link.isPinned 
+                      ? "text-amber-500 hover:text-amber-600" 
+                      : "text-muted-foreground hover:text-amber-500 opacity-0 group-hover:opacity-100"
                 }`}
                 title={link.isPinned ? "Unpin link" : "Pin link"}
                 data-testid={`button-pin-${link.id}`}
               >
-                <Star size={14} fill={link.isPinned ? "currentColor" : "none"} />
+                {isPinning ? (
+                  <Loader2 size={14} className="animate-spin text-amber-500" />
+                ) : (
+                  <Star size={14} fill={link.isPinned ? "currentColor" : "none"} />
+                )}
               </button>
               <a 
                 href={link.url}

@@ -51,11 +51,7 @@ const formSchema = z.object({
   note: z.string().optional(),
 });
 
-interface AddLinkDialogProps {
-  onSaving?: () => void;
-}
-
-export function AddLinkDialog({ onSaving }: AddLinkDialogProps) {
+export function AddLinkDialog() {
   const { addLink, groups, activeGroupId, user, setShowAuthModal } = useVault();
   const [open, setOpen] = useState(false);
 
@@ -87,7 +83,6 @@ export function AddLinkDialog({ onSaving }: AddLinkDialogProps) {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const normalizedUrl = normalizeUrl(values.url);
-    onSaving?.();
     addLink({
       url: normalizedUrl,
       title: values.title,
