@@ -247,5 +247,20 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/links/:id/pin", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { isPinned } = req.body;
+      if (typeof isPinned !== "boolean") {
+        return res.status(400).json({ error: "isPinned must be a boolean" });
+      }
+      const link = await storage.toggleLinkPin(req.params.id, user.id, isPinned);
+      res.json(link);
+    } catch (error) {
+      console.error("Error toggling pin:", error);
+      res.status(500).json({ error: "Failed to toggle pin" });
+    }
+  });
+
   return httpServer;
 }

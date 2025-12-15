@@ -28,6 +28,7 @@ type VaultContextType = {
   
   addLink: (link: { url: string; title: string; groupId: string; note?: string }) => void;
   removeLink: (id: string) => void;
+  togglePin: (id: string) => void;
   addGroup: (name: string) => void;
   deleteGroup: (id: string) => void;
   setActiveGroup: (id: string | 'all') => void;
@@ -87,6 +88,14 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  const togglePinMutation = useMutation({
+    mutationFn: ({ id, isPinned }: { id: string; isPinned: boolean }) => 
+      api.toggleLinkPin(id, isPinned),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['links'] });
+    },
+  });
+
   const createGroupMutation = useMutation({
     mutationFn: api.createGroup,
     onSuccess: () => {
@@ -113,6 +122,13 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
 
   const removeLink = (id: string) => {
     deleteLinkMutation.mutate(id);
+  };
+
+  const togglePin = (id: string) => {
+    const link = links.find(l => l.id === id);
+    if (link) {
+      togglePinMutation.mutate({ id, isPinned: !link.isPinned });
+    }
   };
 
   const addGroup = (name: string) => {
@@ -142,6 +158,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       setShowAuthModal,
       addLink,
       removeLink,
+      togglePin,
       addGroup,
       deleteGroup,
       setActiveGroup,

@@ -30,6 +30,7 @@ export interface IStorage {
   deleteLink(id: string, userId: string): Promise<void>;
   deleteAllLinksByUser(userId: string): Promise<void>;
   countLinksByUser(userId: string): Promise<number>;
+  toggleLinkPin(id: string, userId: string, isPinned: boolean): Promise<Link>;
 }
 
 export class TursoStorage implements IStorage {
@@ -139,6 +140,15 @@ export class TursoStorage implements IStorage {
   async countLinksByUser(userId: string): Promise<number> {
     const links = await db.select().from(schema.links).where(eq(schema.links.userId, userId));
     return links.length;
+  }
+
+  async toggleLinkPin(id: string, userId: string, isPinned: boolean): Promise<Link> {
+    const [updatedLink] = await db
+      .update(schema.links)
+      .set({ isPinned: isPinned ? 1 : 0 })
+      .where(and(eq(schema.links.id, id), eq(schema.links.userId, userId)))
+      .returning();
+    return updatedLink;
   }
 }
 

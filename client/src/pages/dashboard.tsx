@@ -3,13 +3,13 @@ import { LinkCard, LinkCardSkeleton } from "@/components/link-card";
 import { AddLinkDialog } from "@/components/add-link-dialog";
 import { AuthModal } from "@/components/auth-modal";
 import { useVault } from "@/lib/store";
-import { Search, X } from "lucide-react";
+import { Search, X, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 
 export default function Dashboard() {
-  const { links, groups, activeGroupId, removeLink, searchQuery, setSearchQuery, user } = useVault();
+  const { links, groups, activeGroupId, removeLink, togglePin, searchQuery, setSearchQuery, user } = useVault();
   const [searchOpen, setSearchOpen] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -18,15 +18,24 @@ export default function Dashboard() {
     ? { name: 'All Links', id: 'all' } 
     : groups.find(g => g.id === activeGroupId) || { name: 'Unknown', id: 'unknown' };
 
-  const filteredLinks = links.filter(link => {
-    const matchesGroup = activeGroupId === 'all' || link.groupId === activeGroupId;
-    const matchesSearch = 
-      link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      link.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (link.note && link.note.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    return matchesGroup && matchesSearch;
-  });
+  const filteredLinks = links
+    .filter(link => {
+      const matchesGroup = activeGroupId === 'all' || link.groupId === activeGroupId;
+      const matchesSearch = 
+        link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        link.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (link.note && link.note.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      return matchesGroup && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
+
+  const pinnedLinks = filteredLinks.filter(link => link.isPinned);
+  const unpinnedLinks = filteredLinks.filter(link => !link.isPinned);
 
   useEffect(() => {
     if (searchOpen && searchRef.current) {
@@ -146,21 +155,48 @@ export default function Dashboard() {
             </p>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <AnimatePresence mode="popLayout">
-              {showSkeleton && (
-                <LinkCardSkeleton key="skeleton" />
-              )}
-              {filteredLinks.map((link) => (
-                <LinkCard key={link.id} link={link} onDelete={removeLink} />
-              ))}
-            </AnimatePresence>
+          <div className="space-y-6">
+            {pinnedLinks.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Star size={14} className="text-amber-500" fill="currentColor" />
+                  <span className="text-sm font-medium text-muted-foreground">Pinned</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {pinnedLinks.map((link) => (
+                      <LinkCard key={link.id} link={link} onDelete={removeLink} onTogglePin={togglePin} />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
+            
+            {unpinnedLinks.length > 0 && (
+              <div>
+                {pinnedLinks.length > 0 && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-medium text-muted-foreground">Other Links</span>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {showSkeleton && (
+                      <LinkCardSkeleton key="skeleton" />
+                    )}
+                    {unpinnedLinks.map((link) => (
+                      <LinkCard key={link.id} link={link} onDelete={removeLink} onTogglePin={togglePin} />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
             
             {filteredLinks.length === 0 && !showSkeleton && (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="col-span-full py-20 text-center text-muted-foreground"
+                className="py-20 text-center text-muted-foreground"
               >
                 <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
                   <Search size={24} />

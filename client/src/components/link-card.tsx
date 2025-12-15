@@ -1,5 +1,5 @@
 import { Link } from "@/lib/store";
-import { ExternalLink, Trash2 } from "lucide-react";
+import { ExternalLink, Trash2, Star } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -12,9 +12,10 @@ import {
 interface LinkCardProps {
   link: Link;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string) => void;
 }
 
-export function LinkCard({ link, onDelete }: LinkCardProps) {
+export function LinkCard({ link, onDelete, onTogglePin }: LinkCardProps) {
   const getFavicon = (url: string) => {
     try {
       const domain = new URL(url).hostname;
@@ -78,20 +79,33 @@ export function LinkCard({ link, onDelete }: LinkCardProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 shrink-0">
+              <button 
+                onClick={() => onTogglePin(link.id)}
+                className={`p-1.5 rounded-md transition-colors ${
+                  link.isPinned 
+                    ? "text-amber-500 hover:text-amber-600" 
+                    : "text-muted-foreground hover:text-amber-500 opacity-0 group-hover:opacity-100"
+                }`}
+                title={link.isPinned ? "Unpin link" : "Pin link"}
+                data-testid={`button-pin-${link.id}`}
+              >
+                <Star size={14} fill={link.isPinned ? "currentColor" : "none"} />
+              </button>
               <a 
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors opacity-0 group-hover:opacity-100"
                 title="Visit Link"
               >
                 <ExternalLink size={14} />
               </a>
               <button 
                 onClick={() => onDelete(link.id)}
-                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors opacity-0 group-hover:opacity-100"
                 title="Delete link"
+                data-testid={`button-delete-${link.id}`}
               >
                 <Trash2 size={14} />
               </button>

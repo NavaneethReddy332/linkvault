@@ -94,3 +94,13 @@ export async function deleteLink(id: string): Promise<void> {
   const res = await fetch(`/api/links/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete link");
 }
+
+export async function toggleLinkPin(id: string, isPinned: boolean): Promise<Link> {
+  const res = await fetch(`/api/links/${id}/pin`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ isPinned }),
+  });
+  if (!res.ok) throw new Error("Failed to toggle pin");
+  return res.json();
+}
