@@ -104,3 +104,26 @@ export async function toggleLinkPin(id: string, isPinned: boolean): Promise<Link
   if (!res.ok) throw new Error("Failed to toggle pin");
   return res.json();
 }
+
+export async function deleteLinks(ids: string[]): Promise<void> {
+  const res = await fetch("/api/links/batch-delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) throw new Error("Failed to delete links");
+}
+
+export async function moveLinks(ids: string[], groupId: string): Promise<void> {
+  const res = await fetch("/api/links/batch-move", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids, groupId }),
+  });
+  if (!res.ok) throw new Error("Failed to move links");
+}
+
+export async function trackLinkClick(id: string): Promise<void> {
+  const res = await fetch(`/api/links/${id}/click`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to track click");
+}

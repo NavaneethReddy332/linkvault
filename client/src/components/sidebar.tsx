@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const sectionIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   'bookmarks': Bookmark,
@@ -219,6 +220,10 @@ export function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-sidebar-border">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span className="text-xs text-muted-foreground">Theme</span>
+          <ThemeToggle />
+        </div>
         {user ? (
           <div className="space-y-2">
             <Link href="/account">

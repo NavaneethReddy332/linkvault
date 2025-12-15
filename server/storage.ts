@@ -1,6 +1,6 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { InsertGroup, Group, InsertLink, Link, User, Session } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -28,9 +28,12 @@ export interface IStorage {
   getLinksByUser(userId: string): Promise<Link[]>;
   createLink(link: InsertLink): Promise<Link>;
   deleteLink(id: string, userId: string): Promise<void>;
+  deleteLinks(ids: string[], userId: string): Promise<void>;
+  moveLinks(ids: string[], groupId: string, userId: string): Promise<void>;
   deleteAllLinksByUser(userId: string): Promise<void>;
   countLinksByUser(userId: string): Promise<number>;
   toggleLinkPin(id: string, userId: string, isPinned: boolean): Promise<Link>;
+  incrementLinkClick(id: string, userId: string): Promise<void>;
 }
 
 export class TursoStorage implements IStorage {
@@ -133,6 +136,16 @@ export class TursoStorage implements IStorage {
     await db.delete(schema.links).where(and(eq(schema.links.id, id), eq(schema.links.userId, userId)));
   }
 
+  async deleteLinks(ids: string[], userId: string): Promise<void> {
+    if (ids.length === 0) return;
+    await db.delete(schema.links).where(and(inArray(schema.links.id, ids), eq(schema.links.userId, userId)));
+  }
+
+  async moveLinks(ids: string[], groupId: string, userId: string): Promise<void> {
+    if (ids.length === 0) return;
+    await db.update(schema.links).set({ groupId }).where(and(inArray(schema.links.id, ids), eq(schema.links.userId, userId)));
+  }
+
   async deleteAllLinksByUser(userId: string): Promise<void> {
     await db.delete(schema.links).where(eq(schema.links.userId, userId));
   }
@@ -149,6 +162,16 @@ export class TursoStorage implements IStorage {
       .where(and(eq(schema.links.id, id), eq(schema.links.userId, userId)))
       .returning();
     return updatedLink;
+  }
+
+  async incrementLinkClick(id: string, userId: string): Promise<void> {
+    const [link] = await db.select().from(schema.links).where(and(eq(schema.links.id, id), eq(schema.links.userId, userId)));
+    if (link) {
+      await db
+        .update(schema.links)
+        .set({ clickCount: link.clickCount + 1 })
+        .where(and(eq(schema.links.id, id), eq(schema.links.userId, userId)));
+    }
   }
 }
 

@@ -25,6 +25,7 @@ export const links = sqliteTable("links", {
   title: text("title").notNull(),
   note: text("note"),
   isPinned: integer("is_pinned").notNull().default(0),
+  clickCount: integer("click_count").notNull().default(0),
   groupId: text("group_id").notNull().references(() => groups.id, { onDelete: 'cascade' }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
@@ -38,7 +39,7 @@ export const sessions = sqliteTable("sessions", {
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertGroupSchema = createInsertSchema(groups).omit({ id: true });
-export const insertLinkSchema = createInsertSchema(links).omit({ id: true, createdAt: true, isPinned: true });
+export const insertLinkSchema = createInsertSchema(links).omit({ id: true, createdAt: true, isPinned: true, clickCount: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;

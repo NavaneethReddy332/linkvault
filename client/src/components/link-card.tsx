@@ -1,5 +1,5 @@
 import { Link } from "@/lib/store";
-import { ExternalLink, Trash2, Star } from "lucide-react";
+import { ExternalLink, Trash2, Star, MousePointerClick } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -8,14 +8,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { trackLinkClick } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 
 interface LinkCardProps {
   link: Link;
   onDelete: (id: string) => void;
   onTogglePin: (id: string) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
+  hasSelection?: boolean;
 }
 
-export function LinkCard({ link, onDelete, onTogglePin }: LinkCardProps) {
+export function LinkCard({ link, onDelete, onTogglePin, isSelected = false, onToggleSelect, hasSelection = false }: LinkCardProps) {
   const getFavicon = (url: string) => {
     try {
       const domain = new URL(url).hostname;
@@ -33,6 +39,15 @@ export function LinkCard({ link, onDelete, onTogglePin }: LinkCardProps) {
     }
   };
 
+  const handleLinkClick = async () => {
+    try {
+      await trackLinkClick(link.id);
+      queryClient.invalidateQueries({ queryKey: ['links'] });
+    } catch (e) {
+      // silently fail - don't prevent navigation
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={400}>
       <Tooltip>
@@ -43,8 +58,27 @@ export function LinkCard({ link, onDelete, onTogglePin }: LinkCardProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="group relative flex items-center gap-3 p-3 bg-card rounded-lg border border-card-border hover:shadow-sm hover:border-sidebar-border transition-all duration-200"
+            className={`group relative flex items-center gap-3 p-3 bg-card rounded-lg border transition-all duration-200 ${
+              isSelected 
+                ? "border-primary/50 bg-primary/5" 
+                : "border-card-border hover:shadow-sm hover:border-sidebar-border"
+            }`}
           >
+            {onToggleSelect && (
+              <div 
+                className={`shrink-0 transition-all duration-200 ${
+                  hasSelection || isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
+                style={{ visibility: hasSelection || isSelected ? "visible" : undefined }}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onToggleSelect(link.id)}
+                  data-testid={`checkbox-select-${link.id}`}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+            )}
             <div className="w-10 h-10 rounded-md bg-secondary/50 flex items-center justify-center shrink-0 border border-border/50 self-start mt-0.5">
               <img 
                 src={getFavicon(link.url)} 
@@ -59,7 +93,7 @@ export function LinkCard({ link, onDelete, onTogglePin }: LinkCardProps) {
             <div className="min-w-0 flex-1 flex flex-col justify-center">
               <div className="flex items-baseline gap-2">
                 <h3 className="font-medium text-foreground leading-none truncate">
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-1 underline-offset-2">
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-1 underline-offset-2" onClick={handleLinkClick}>
                     {link.title}
                   </a>
                 </h3>
@@ -73,9 +107,23 @@ export function LinkCard({ link, onDelete, onTogglePin }: LinkCardProps) {
                   {link.note}
                 </p>
               ) : (
-                <p className="text-[10px] text-muted-foreground mt-1 opacity-50">
-                  Added {formatDistanceToNow(link.createdAt, { addSuffix: true })}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-[10px] text-muted-foreground opacity-50">
+                    Added {formatDistanceToNow(link.createdAt, { addSuffix: true })}
+                  </p>
+                  {link.clickCount > 0 && (
+                    <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground opacity-50" data-testid={`text-clicks-${link.id}`}>
+                      <MousePointerClick size={10} />
+                      {link.clickCount}
+                    </span>
+                  )}
+                </div>
+              )}
+              {link.note && link.clickCount > 0 && (
+                <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground opacity-50 mt-0.5" data-testid={`text-clicks-${link.id}`}>
+                  <MousePointerClick size={10} />
+                  {link.clickCount}
+                </span>
               )}
             </div>
 
@@ -98,6 +146,7 @@ export function LinkCard({ link, onDelete, onTogglePin }: LinkCardProps) {
                 rel="noopener noreferrer"
                 className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors opacity-0 group-hover:opacity-100"
                 title="Visit Link"
+                onClick={handleLinkClick}
               >
                 <ExternalLink size={14} />
               </a>

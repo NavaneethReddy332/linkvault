@@ -3,13 +3,35 @@ import { LinkCard, LinkCardSkeleton } from "@/components/link-card";
 import { AddLinkDialog } from "@/components/add-link-dialog";
 import { AuthModal } from "@/components/auth-modal";
 import { useVault } from "@/lib/store";
-import { Search, X, Star } from "lucide-react";
+import { Search, X, Star, Trash2, FolderInput, CheckSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Dashboard() {
-  const { links, groups, activeGroupId, removeLink, togglePin, searchQuery, setSearchQuery, user } = useVault();
+  const { 
+    links, 
+    groups, 
+    activeGroupId, 
+    removeLink, 
+    togglePin, 
+    searchQuery, 
+    setSearchQuery, 
+    user,
+    selectedLinks,
+    toggleSelectLink,
+    selectAllLinks,
+    clearSelection,
+    deleteSelectedLinks,
+    moveSelectedLinks,
+  } = useVault();
   const [searchOpen, setSearchOpen] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -36,6 +58,9 @@ export default function Dashboard() {
 
   const pinnedLinks = filteredLinks.filter(link => link.isPinned);
   const unpinnedLinks = filteredLinks.filter(link => !link.isPinned);
+  
+  const hasSelection = selectedLinks.length > 0;
+  const allSelected = filteredLinks.length > 0 && filteredLinks.every(link => selectedLinks.includes(link.id));
 
   useEffect(() => {
     if (searchOpen && searchRef.current) {
@@ -63,6 +88,14 @@ export default function Dashboard() {
     setShowSkeleton(true);
   };
 
+  const handleSelectAll = () => {
+    if (allSelected) {
+      clearSelection();
+    } else {
+      selectAllLinks(filteredLinks.map(link => link.id));
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -75,7 +108,7 @@ export default function Dashboard() {
       
       <main className="flex-1 ml-64 p-8 max-w-7xl mx-auto w-full">
         <header className="flex flex-col gap-6 mb-10">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center">
               <motion.div
                 initial={false}
@@ -138,6 +171,82 @@ export default function Dashboard() {
           </div>
         </header>
 
+        <AnimatePresence>
+          {hasSelection && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mb-6"
+            >
+              <div className="flex items-center justify-between gap-4 p-3 bg-secondary/50 rounded-lg border border-border/50">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-foreground">
+                    {selectedLinks.length} {selectedLinks.length === 1 ? 'link' : 'links'} selected
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSelectAll}
+                    data-testid="button-select-all"
+                  >
+                    <CheckSquare size={14} className="mr-1.5" />
+                    {allSelected ? 'Deselect All' : 'Select All'}
+                  </Button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid="button-move-selected"
+                      >
+                        <FolderInput size={14} className="mr-1.5" />
+                        Move to...
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {groups.map((group) => (
+                        <DropdownMenuItem
+                          key={group.id}
+                          onClick={() => moveSelectedLinks(group.id)}
+                          data-testid={`menu-move-to-${group.id}`}
+                        >
+                          {group.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={deleteSelectedLinks}
+                    data-testid="button-delete-selected"
+                  >
+                    <Trash2 size={14} className="mr-1.5" />
+                    Delete Selected
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    data-testid="button-clear-selection"
+                  >
+                    <X size={14} className="mr-1.5" />
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {!user ? (
           <motion.div 
             initial={{ opacity: 0 }}
@@ -156,6 +265,21 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           <div className="space-y-6">
+            {user && filteredLinks.length > 0 && !hasSelection && (
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  className="text-muted-foreground"
+                  data-testid="button-select-all-top"
+                >
+                  <CheckSquare size={14} className="mr-1.5" />
+                  Select All
+                </Button>
+              </div>
+            )}
+            
             {pinnedLinks.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
@@ -165,7 +289,15 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   <AnimatePresence mode="popLayout">
                     {pinnedLinks.map((link) => (
-                      <LinkCard key={link.id} link={link} onDelete={removeLink} onTogglePin={togglePin} />
+                      <LinkCard 
+                        key={link.id} 
+                        link={link} 
+                        onDelete={removeLink} 
+                        onTogglePin={togglePin}
+                        isSelected={selectedLinks.includes(link.id)}
+                        onToggleSelect={toggleSelectLink}
+                        hasSelection={hasSelection}
+                      />
                     ))}
                   </AnimatePresence>
                 </div>
@@ -185,7 +317,15 @@ export default function Dashboard() {
                       <LinkCardSkeleton key="skeleton" />
                     )}
                     {unpinnedLinks.map((link) => (
-                      <LinkCard key={link.id} link={link} onDelete={removeLink} onTogglePin={togglePin} />
+                      <LinkCard 
+                        key={link.id} 
+                        link={link} 
+                        onDelete={removeLink} 
+                        onTogglePin={togglePin}
+                        isSelected={selectedLinks.includes(link.id)}
+                        onToggleSelect={toggleSelectLink}
+                        hasSelection={hasSelection}
+                      />
                     ))}
                   </AnimatePresence>
                 </div>

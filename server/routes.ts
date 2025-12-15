@@ -262,5 +262,49 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/links/batch-delete", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || !ids.every(id => typeof id === "string")) {
+        return res.status(400).json({ error: "ids must be an array of strings" });
+      }
+      await storage.deleteLinks(ids, user.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error batch deleting links:", error);
+      res.status(500).json({ error: "Failed to delete links" });
+    }
+  });
+
+  app.post("/api/links/batch-move", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { ids, groupId } = req.body;
+      if (!Array.isArray(ids) || !ids.every(id => typeof id === "string")) {
+        return res.status(400).json({ error: "ids must be an array of strings" });
+      }
+      if (typeof groupId !== "string") {
+        return res.status(400).json({ error: "groupId must be a string" });
+      }
+      await storage.moveLinks(ids, groupId, user.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error batch moving links:", error);
+      res.status(500).json({ error: "Failed to move links" });
+    }
+  });
+
+  app.post("/api/links/:id/click", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      await storage.incrementLinkClick(req.params.id, user.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking link click:", error);
+      res.status(500).json({ error: "Failed to track click" });
+    }
+  });
+
   return httpServer;
 }
