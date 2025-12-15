@@ -1,5 +1,5 @@
 import { useVault } from "@/lib/store";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose
+  DialogDescription
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -29,11 +29,11 @@ const formSchema = z.object({
   url: z.string().url("Please enter a valid URL"),
   title: z.string().min(1, "Title is required"),
   groupId: z.string().min(1, "Please select a section"),
-  note: z.string().optional().default(""),
+  note: z.string().optional(),
 });
 
 export function AddLinkDialog() {
-  const { addLink, groups, activeGroupId } = useVault();
+  const { addLink, groups, activeGroupId, user, setShowAuthModal } = useVault();
   const [open, setOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -46,22 +46,39 @@ export function AddLinkDialog() {
     },
   });
 
+  function handleOpenChange(newOpen: boolean) {
+    if (newOpen && !user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setOpen(newOpen);
+  }
+
   function onSubmit(values: z.infer<typeof formSchema>) {
-    addLink(values);
+    addLink({
+      url: values.url,
+      title: values.title,
+      groupId: values.groupId,
+      note: values.note || undefined,
+    });
     form.reset();
     setOpen(false);
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="rounded-full shadow-lg bg-foreground text-background hover:bg-foreground/90 transition-all active:scale-95">
+        <Button 
+          data-testid="button-add-link"
+          className="rounded-full shadow-lg bg-foreground text-background hover:bg-foreground/90 transition-all active:scale-95"
+        >
           <Plus size={18} className="mr-2" /> Add Link
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] border-border/50 shadow-xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-display font-medium">Save a new link</DialogTitle>
+          <DialogDescription className="text-muted-foreground">Add a link to your vault for easy access later.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
@@ -72,7 +89,7 @@ export function AddLinkDialog() {
                 <FormItem>
                   <FormLabel>URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://..." {...field} className="font-mono text-sm bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all" />
+                    <Input data-testid="input-url" placeholder="https://..." {...field} className="font-mono text-sm bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -85,7 +102,7 @@ export function AddLinkDialog() {
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="What is this?" {...field} className="bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all" />
+                    <Input data-testid="input-title" placeholder="What is this?" {...field} className="bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -99,7 +116,7 @@ export function AddLinkDialog() {
                   <FormLabel>Section</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className="bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all">
+                      <SelectTrigger data-testid="select-group" className="bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all">
                         <SelectValue placeholder="Select a section" />
                       </SelectTrigger>
                     </FormControl>
@@ -123,6 +140,7 @@ export function AddLinkDialog() {
                   <FormLabel>Note (Optional)</FormLabel>
                   <FormControl>
                     <Textarea 
+                      data-testid="input-note"
                       placeholder="Why are you saving this?" 
                       className="resize-none bg-secondary/30 border-transparent focus:border-border focus:bg-background transition-all" 
                       {...field} 
@@ -134,7 +152,7 @@ export function AddLinkDialog() {
             />
             <div className="pt-4 flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Link</Button>
+              <Button type="submit" data-testid="button-submit-link">Save Link</Button>
             </div>
           </form>
         </Form>

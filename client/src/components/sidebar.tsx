@@ -1,12 +1,13 @@
 import { useVault } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { Folder, Grid, Plus, Settings, Hash } from "lucide-react";
+import { Grid, Plus, Hash, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Link } from "wouter";
 
 export function Sidebar() {
-  const { groups, activeGroupId, setActiveGroup, addGroup } = useVault();
+  const { groups, activeGroupId, setActiveGroup, addGroup, user, logout, setShowAuthModal } = useVault();
   const [isAddingGroup, setIsAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
 
@@ -22,20 +23,23 @@ export function Sidebar() {
   return (
     <aside className="w-64 h-screen fixed left-0 top-0 border-r border-sidebar-border bg-sidebar flex flex-col z-20">
       <div className="p-6 pb-2">
-        <h1 className="text-xl font-bold font-display tracking-tight flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-foreground text-background flex items-center justify-center">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          Vault
-        </h1>
+        <Link href="/">
+          <h1 className="text-xl font-bold font-display tracking-tight flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="w-6 h-6 rounded bg-foreground text-background flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            Vault
+          </h1>
+        </Link>
       </div>
 
       <div className="px-3 py-4 flex-1 overflow-y-auto">
         <nav className="space-y-0.5">
           <button
             onClick={() => setActiveGroup('all')}
+            data-testid="button-all-links"
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
               activeGroupId === 'all' 
@@ -49,18 +53,22 @@ export function Sidebar() {
 
           <div className="pt-4 pb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between group">
             <span>Sections</span>
-            <button 
-              onClick={() => setIsAddingGroup(true)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
-            >
-              <Plus size={14} />
-            </button>
+            {user && (
+              <button 
+                onClick={() => setIsAddingGroup(true)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
+                data-testid="button-add-section"
+              >
+                <Plus size={14} />
+              </button>
+            )}
           </div>
 
           {groups.map((group) => (
             <button
               key={group.id}
               onClick={() => setActiveGroup(group.id)}
+              data-testid={`button-group-${group.id}`}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 group relative",
                 activeGroupId === group.id 
@@ -82,6 +90,7 @@ export function Sidebar() {
                 onBlur={() => setIsAddingGroup(false)}
                 placeholder="New Section..."
                 className="h-8 text-sm"
+                data-testid="input-new-section"
               />
             </form>
           )}
@@ -89,9 +98,41 @@ export function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="text-xs text-muted-foreground text-center">
-          <p>Local Storage Mode</p>
-        </div>
+        {user ? (
+          <div className="space-y-2">
+            <Link href="/account">
+              <button 
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+                data-testid="button-account"
+              >
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" className="w-6 h-6 rounded-full" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
+                    <User size={14} />
+                  </div>
+                )}
+                <span className="truncate">{user.name}</span>
+              </button>
+            </Link>
+            <button 
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              data-testid="button-logout"
+            >
+              <LogOut size={16} />
+              <span>Sign out</span>
+            </button>
+          </div>
+        ) : (
+          <Button 
+            onClick={() => setShowAuthModal(true)} 
+            className="w-full"
+            data-testid="button-signin"
+          >
+            Sign in with Google
+          </Button>
+        )}
       </div>
     </aside>
   );

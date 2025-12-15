@@ -1,17 +1,32 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Group, Link, InsertGroup, InsertLink } from '@shared/schema';
+import type { Group, Link } from '@shared/schema';
 import * as api from './api';
 
 export type { Group, Link };
 
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  createdAt: Date;
+};
+
 type VaultContextType = {
+  user: User | null;
+  isLoading: boolean;
   links: Link[];
   groups: Group[];
   activeGroupId: string | 'all';
   searchQuery: string;
-  isLoading: boolean;
-  addLink: (link: InsertLink) => void;
+  showAuthModal: boolean;
+  
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
+  setShowAuthModal: (show: boolean) => void;
+  
+  addLink: (link: { url: string; title: string; groupId: string; note?: string }) => void;
   removeLink: (id: string) => void;
   addGroup: (name: string) => void;
   deleteGroup: (id: string) => void;
@@ -25,15 +40,37 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [activeGroupId, setActiveGroup] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const { data: user, isLoading: userLoading, refetch: refetchUser } = useQuery({
+    queryKey: ['user'],
+    queryFn: api.getCurrentUser,
+    staleTime: Infinity,
+  });
 
   const { data: groups = [], isLoading: groupsLoading } = useQuery({
     queryKey: ['groups'],
     queryFn: api.fetchGroups,
+    enabled: !!user,
   });
 
   const { data: links = [], isLoading: linksLoading } = useQuery({
     queryKey: ['links'],
     queryFn: api.fetchLinks,
+    enabled: !!user,
+  });
+
+  const login = useCallback(async () => {
+    const url = await api.getGoogleAuthUrl();
+    window.location.href = url;
+  }, []);
+
+  const logoutMutation = useMutation({
+    mutationFn: api.logout,
+    onSuccess: () => {
+      queryClient.clear();
+      window.location.href = '/';
+    },
   });
 
   const createLinkMutation = useMutation({
@@ -62,13 +99,15 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       queryClient.invalidateQueries({ queryKey: ['links'] });
-      if (activeGroupId === deletedId) {
-        setActiveGroup('all');
-      }
+      if (activeGroupId === deletedId) setActiveGroup('all');
     },
   });
 
-  const addLink = (linkData: InsertLink) => {
+  const addLink = (linkData: { url: string; title: string; groupId: string; note?: string }) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     createLinkMutation.mutate(linkData);
   };
 
@@ -77,6 +116,10 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addGroup = (name: string) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     const order = groups.length + 1;
     createGroupMutation.mutate({ name, order });
   };
@@ -87,11 +130,16 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <VaultContext.Provider value={{
+      user: user ?? null,
+      isLoading: userLoading || groupsLoading || linksLoading,
       links,
       groups,
       activeGroupId,
       searchQuery,
-      isLoading: groupsLoading || linksLoading,
+      showAuthModal,
+      login,
+      logout: () => logoutMutation.mutateAsync(),
+      setShowAuthModal,
       addLink,
       removeLink,
       addGroup,
