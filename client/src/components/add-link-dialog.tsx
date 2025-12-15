@@ -29,7 +29,7 @@ const formSchema = z.object({
   url: z.string().url("Please enter a valid URL"),
   title: z.string().min(1, "Title is required"),
   groupId: z.string().min(1, "Please select a section"),
-  note: z.string().optional(),
+  note: z.string().optional().default(""),
 });
 
 export function AddLinkDialog() {

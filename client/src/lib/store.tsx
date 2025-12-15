@@ -1,15 +1,17 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initialData, LinkItem, Group } from './data';
+import React, { createContext, useContext, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Group, Link, InsertGroup, InsertLink } from '@shared/schema';
+import * as api from './api';
 
-// Re-defining types here for clarity in Context
-export type { LinkItem, Group };
+export type { Group, Link };
 
 type VaultContextType = {
-  links: LinkItem[];
+  links: Link[];
   groups: Group[];
   activeGroupId: string | 'all';
   searchQuery: string;
-  addLink: (link: Omit<LinkItem, 'id' | 'createdAt'>) => void;
+  isLoading: boolean;
+  addLink: (link: InsertLink) => void;
   removeLink: (id: string) => void;
   addGroup: (name: string) => void;
   deleteGroup: (id: string) => void;
@@ -19,55 +21,68 @@ type VaultContextType = {
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'vault_db_v1';
-
 export function VaultProvider({ children }: { children: React.ReactNode }) {
-  const [links, setLinks] = useState<LinkItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved).links : initialData.links;
-  });
-
-  const [groups, setGroups] = useState<Group[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved).groups : initialData.groups;
-  });
-
+  const queryClient = useQueryClient();
   const [activeGroupId, setActiveGroup] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ links, groups }));
-  }, [links, groups]);
+  const { data: groups = [], isLoading: groupsLoading } = useQuery({
+    queryKey: ['groups'],
+    queryFn: api.fetchGroups,
+  });
 
-  const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+  const { data: links = [], isLoading: linksLoading } = useQuery({
+    queryKey: ['links'],
+    queryFn: api.fetchLinks,
+  });
 
-  const addLink = (linkData: Omit<LinkItem, 'id' | 'createdAt'>) => {
-    const newLink: LinkItem = {
-      ...linkData,
-      id: generateId(),
-      createdAt: Date.now(),
-    };
-    setLinks(prev => [newLink, ...prev]);
+  const createLinkMutation = useMutation({
+    mutationFn: api.createLink,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['links'] });
+    },
+  });
+
+  const deleteLinkMutation = useMutation({
+    mutationFn: api.deleteLink,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['links'] });
+    },
+  });
+
+  const createGroupMutation = useMutation({
+    mutationFn: api.createGroup,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: api.deleteGroup,
+    onSuccess: (_, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['links'] });
+      if (activeGroupId === deletedId) {
+        setActiveGroup('all');
+      }
+    },
+  });
+
+  const addLink = (linkData: InsertLink) => {
+    createLinkMutation.mutate(linkData);
   };
 
   const removeLink = (id: string) => {
-    setLinks(prev => prev.filter(l => l.id !== id));
+    deleteLinkMutation.mutate(id);
   };
 
   const addGroup = (name: string) => {
-    const newGroup: Group = {
-      id: generateId(),
-      name,
-      order: groups.length + 1,
-    };
-    setGroups(prev => [...prev, newGroup]);
+    const order = groups.length + 1;
+    createGroupMutation.mutate({ name, order });
   };
 
   const deleteGroup = (id: string) => {
-    setGroups(prev => prev.filter(g => g.id !== id));
-    // Optionally move links to 'uncategorized' or delete them. For now, we delete them.
-    setLinks(prev => prev.filter(l => l.groupId !== id));
-    if (activeGroupId === id) setActiveGroup('all');
+    deleteGroupMutation.mutate(id);
   };
 
   return (
@@ -76,6 +91,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       groups,
       activeGroupId,
       searchQuery,
+      isLoading: groupsLoading || linksLoading,
       addLink,
       removeLink,
       addGroup,

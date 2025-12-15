@@ -1,38 +1,62 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
+import * as schema from "@shared/schema";
+import { eq } from "drizzle-orm";
+import type { InsertGroup, Group, InsertLink, Link } from "@shared/schema";
 
-// modify the interface with any CRUD methods
-// you might need
+const { Pool } = pg;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+export const db = drizzle(pool, { schema });
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Groups
+  getAllGroups(): Promise<Group[]>;
+  createGroup(group: InsertGroup): Promise<Group>;
+  deleteGroup(id: string): Promise<void>;
+  
+  // Links
+  getAllLinks(): Promise<Link[]>;
+  getLinksByGroup(groupId: string): Promise<Link[]>;
+  createLink(link: InsertLink): Promise<Link>;
+  deleteLink(id: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  // Groups
+  async getAllGroups(): Promise<Group[]> {
+    return db.select().from(schema.groups).orderBy(schema.groups.order);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async createGroup(group: InsertGroup): Promise<Group> {
+    const [newGroup] = await db.insert(schema.groups).values(group).returning();
+    return newGroup;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async deleteGroup(id: string): Promise<void> {
+    await db.delete(schema.groups).where(eq(schema.groups.id, id));
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  // Links
+  async getAllLinks(): Promise<Link[]> {
+    return db.select().from(schema.links).orderBy(schema.links.createdAt);
+  }
+
+  async getLinksByGroup(groupId: string): Promise<Link[]> {
+    return db.select().from(schema.links).where(eq(schema.links.groupId, groupId));
+  }
+
+  async createLink(link: InsertLink): Promise<Link> {
+    const [newLink] = await db.insert(schema.links).values(link).returning();
+    return newLink;
+  }
+
+  async deleteLink(id: string): Promise<void> {
+    await db.delete(schema.links).where(eq(schema.links.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

@@ -1,10 +1,10 @@
-import { LinkItem } from "@/lib/store";
+import { Link } from "@/lib/store";
 import { ExternalLink, Trash2, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 
 interface LinkCardProps {
-  link: LinkItem;
+  link: Link;
   onDelete: (id: string) => void;
 }
 
